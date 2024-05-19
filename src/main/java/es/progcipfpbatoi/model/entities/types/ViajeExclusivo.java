@@ -6,6 +6,7 @@ package es.progcipfpbatoi.model.entities.types;
 
 import es.progcipfpbatoi.model.entities.Reserva;
 import es.progcipfpbatoi.model.entities.Usuario;
+import java.time.LocalDateTime;
 
 /**
  *
@@ -13,8 +14,8 @@ import es.progcipfpbatoi.model.entities.Usuario;
  */
 public class ViajeExclusivo extends Viaje {
     
-    public ViajeExclusivo(Usuario propietario, String ruta, int duracion, int plazasOfertadas, float precio) {
-        super(propietario, ruta, duracion, plazasOfertadas, precio);
+    public ViajeExclusivo(Usuario propietario, String ruta, int duracion, LocalDateTime fechaSalida, int plazasOfertadas, float precio) {
+        super(propietario, ruta, duracion, fechaSalida, plazasOfertadas, precio);
     }
 
     @Override

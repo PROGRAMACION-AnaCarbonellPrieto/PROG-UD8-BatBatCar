@@ -4,6 +4,7 @@
  */
 package es.progcipfpbatoi.model.managers;
 
+import es.progcipfpbatoi.exceptions.CredencialesInvalidasException;
 import es.progcipfpbatoi.model.entities.Usuario;
 import es.progcipfpbatoi.views.GestorIO;
 import java.util.ArrayList;
@@ -21,15 +22,11 @@ public class UsuariosManager {
         init();
     }
     
-    public Usuario comprobarExistenciaUsuario(String nombre) {
+    public Usuario comprobarCredenciales(String nombre, String contrasenya) throws CredencialesInvalidasException {
         for (Usuario usuario: this.usuarios) {
-            if (usuario.comprobarNombre(nombre)) return usuario;
+            if (usuario.comprobarNombre(nombre) && usuario.comprobarContrasenya(contrasenya)) return usuario;
         }
-        return null;
-    }
-    
-    public boolean comprobarContrasenyaUsuario(Usuario usuario, String contrasenya) {
-        return usuario.comprobarContrasenya(contrasenya);
+        throw new CredencialesInvalidasException();
     }
     
     private void init() {

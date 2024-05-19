@@ -2,6 +2,9 @@ package es.progcipfpbatoi.model.entities.types;
 
 import es.progcipfpbatoi.model.entities.Reserva;
 import es.progcipfpbatoi.model.entities.Usuario;
+import java.text.NumberFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +19,7 @@ public class Viaje {
     protected Usuario propietario;
     protected String ruta;
     private int duracion;
+    private LocalDateTime fechaSalida;
     protected int plazasOfertadas;
     protected int plazasReservadas;
     protected float precio;
@@ -23,11 +27,12 @@ public class Viaje {
     protected boolean cancelado;
     protected List<Reserva> reservas;
 
-    public Viaje(Usuario propietario, String ruta, int duracion, int plazasOfertadas, float precio) {
+    public Viaje(Usuario propietario, String ruta, int duracion, LocalDateTime fechaSalida, int plazasOfertadas, float precio) {
         this.codViaje = crearNuevoCodigo();
         this.propietario = propietario;
         this.ruta = ruta;
         this.duracion = duracion;
+        this.fechaSalida = fechaSalida;
         this.plazasOfertadas = plazasOfertadas;
         this.plazasReservadas = 0;
         this.precio = precio;
@@ -66,8 +71,9 @@ public class Viaje {
         return this.ruta;
     }
 
-    public float getPrecio() {
-        return this.precio;
+    public String getPrecioFormateado() {
+        NumberFormat formato = NumberFormat.getCurrencyInstance();
+        return formato.format(this.precio);
     }
 
     public Usuario getPropietario() {
@@ -84,6 +90,15 @@ public class Viaje {
 
     public List<Reserva> getReservas() {
         return reservas;
+    }
+
+    public LocalDateTime getFechaSalida() {
+        return this.fechaSalida;
+    }
+    
+    public String getFechaFormateada() {
+        DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd-MM-yyyy 'a las' HH:mm");
+        return this.fechaSalida.format(formato);
     }
 
     public boolean isCancelado() {

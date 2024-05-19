@@ -1,5 +1,11 @@
 package es.progcipfpbatoi.controller;
 
+import es.progcipfpbatoi.exceptions.CredencialesInvalidasException;
+import es.progcipfpbatoi.exceptions.FechaPasadaException;
+import es.progcipfpbatoi.exceptions.MaximoIntentosAlcanzadosException;
+import es.progcipfpbatoi.exceptions.ReservaNoValidaException;
+import es.progcipfpbatoi.exceptions.UsuarioSinEstablecerException;
+import es.progcipfpbatoi.exceptions.ViajeNoValidoException;
 import es.progcipfpbatoi.model.entities.Reserva;
 import es.progcipfpbatoi.model.entities.Usuario;
 import es.progcipfpbatoi.model.entities.types.Cancelable;
@@ -13,6 +19,9 @@ import es.progcipfpbatoi.views.GestorIO;
 import es.progcipfpbatoi.views.ListadoReservasView;
 import es.progcipfpbatoi.views.ListadoViajesView;
 import es.progcipfpbatoi.views.ReservaView;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,12 +47,17 @@ public class ViajesController {
     /**
      * Añade un viaje al sistema, preguntando previamente por toda la información necesaria para crearlo.
      */
-    public void anyadirViaje() {
-        if (!isLogeado()) return;
+    public void anyadirViaje() throws UsuarioSinEstablecerException {
+        isLogeado();
         
         mostrarTiposViajes();
         int opcionSeleccionada = GestorIO.getInt("Seleccione el tipo de viaje", 1, 4);
-        crearViaje(opcionSeleccionada);
+        
+        try {
+            crearViaje(opcionSeleccionada);
+        } catch (FechaPasadaException e) {
+            GestorIO.print(e.getMessage());
+        }
     }
     
     private void mostrarTiposViajes() {
@@ -53,43 +67,47 @@ public class ViajesController {
         GestorIO.print("4- Viaje Flexible");
     }
     
-    private void crearViaje(int opcionSeleccionada) {
+    private void crearViaje(int opcionSeleccionada) throws FechaPasadaException {
         Viaje viaje = null;
-        String ruta = GestorIO.getRuta("Introduzca la ruta a realizar (Ej: Alcoy-Alicante)");
+        String ruta = GestorIO.getRuta("Introduzca la ruta a realizar");
+        LocalDate fecha = GestorIO.getFecha("Introduza la fecha");
+        LocalTime hora = GestorIO.getHora("Introduza la hora");
         int duracion = GestorIO.getInt("Introduzca la duración del viaje en minutos");
         float precio = GestorIO.getFloat("Introduzca el precio de cada plaza");
         int plazasOfertadas = GestorIO.getInt("Introduza el número de plazas disponibles");
         
+        LocalDateTime fechaSalida = LocalDateTime.of(fecha, hora);
+        if (LocalDateTime.now().isAfter(fechaSalida)) throw new FechaPasadaException();
+        
         switch (opcionSeleccionada) {
-            case 1 -> viaje = new Viaje(this.usuario, ruta, duracion, plazasOfertadas, precio);
-            case 2 -> viaje = new ViajeCancelable(this.usuario, ruta, duracion, plazasOfertadas, precio);
-            case 3 -> viaje = new ViajeExclusivo(this.usuario, ruta, duracion, plazasOfertadas, precio);
-            case 4 -> viaje = new ViajeFlexible(this.usuario, ruta, duracion, plazasOfertadas, precio);
+            case 1 -> viaje = new Viaje(this.usuario, ruta, duracion, fechaSalida, plazasOfertadas, precio);
+            case 2 -> viaje = new ViajeCancelable(this.usuario, ruta, duracion, fechaSalida, plazasOfertadas, precio);
+            case 3 -> viaje = new ViajeExclusivo(this.usuario, ruta, duracion, fechaSalida, plazasOfertadas, precio);
+            case 4 -> viaje = new ViajeFlexible(this.usuario, ruta, duracion, fechaSalida, plazasOfertadas, precio);
         }
         
         this.viajesManager.add(viaje);
         GestorIO.print(viaje + " añadido con éxito");
     }
     
-    public void cancelarViaje() {
-        if (!isLogeado()) return;
+    public void cancelarViaje() throws UsuarioSinEstablecerException {
+        isLogeado();
         
         List<Viaje> viajesCancelables = listarViajesCanceclables();
         if (viajesCancelables.isEmpty()) {
             GestorIO.print("Todavía no ha añadido ningún viaje.");
             return;
         }
+        (new ListadoViajesView(viajesCancelables)).visualizar();
         
         int viajeSeleccionado = GestorIO.getInt("Introduzca el código del viaje a seleccionar");
-        Viaje viaje = buscarViaje(viajeSeleccionado, viajesCancelables);
-        
-        if (viaje == null) {
-            GestorIO.print("Error al intentar cancelar el viaje.");
-            return;
+        try {
+            Viaje viaje = buscarViaje(viajeSeleccionado, viajesCancelables);
+            viajesManager.cancel(viaje);
+            GestorIO.print("El viaje se ha cancelado correctamente.");
+        } catch (ViajeNoValidoException e) {
+            GestorIO.print(e.getMessage());
         }
-        
-        viajesManager.cancel(viaje);
-        GestorIO.print("El viaje se ha cancelado correctamente.");
     }
     
     private List<Viaje> listarViajesCanceclables() {
@@ -97,47 +115,54 @@ public class ViajesController {
         List<Viaje> viajesCancelables = new ArrayList<>();
         
         for (Viaje viaje: viajes) {
-            if (viaje.getPropietario().equals(usuario) && !viaje.isCancelado()) {
+            if (
+                viaje.getPropietario().equals(usuario) &&
+                !viaje.isCancelado() &&
+                LocalDateTime.now().isBefore(viaje.getFechaSalida())
+            ) {
                 viajesCancelables.add(viaje);
             }
         }
-        
-        (new ListadoViajesView(viajesCancelables)).visualizar();
         return viajesCancelables;
     }
     
-    private Viaje buscarViaje(int viajeSeleccionado, List<Viaje> viajes) {
+    private Viaje buscarViaje(int viajeSeleccionado, List<Viaje> viajes) throws ViajeNoValidoException {
         for (Viaje viaje: viajes) {
             if (viaje.getCodViaje() == viajeSeleccionado) {
                 return viaje;
             }
         }
-        return null;
+        throw new ViajeNoValidoException();
     }
     
-    public void reservarViaje() {
-        if (!isLogeado()) return;
+    public void reservarViaje() throws UsuarioSinEstablecerException {
+        isLogeado();
         
         List<Viaje> viajesReservables = listarViajesReservables();
         if (viajesReservables.isEmpty()) {
             GestorIO.print("No hay viajes para reservar.");
             return;
         }
+        (new ListadoViajesView(viajesReservables)).visualizar();
         crearReserva(viajesReservables);
     }
     
     private void crearReserva(List<Viaje> viajes) {
         int viajeSeleccionado = GestorIO.getInt("Introduzca el código del viaje a seleccionar");
         int plazas = GestorIO.getInt("Introduzca el número de plazas a reservar");
-        Viaje viaje = buscarViaje(viajeSeleccionado, viajes);
         
-        Reserva reserva;
-        if (viaje == null || (reserva = viaje.realizarReserva(this.usuario, plazas)) == null) {
-            GestorIO.print("Error al intentar reservar el viaje.");
-            return;
-        }
-        
-        mostrarReserva(reserva);
+        try {
+            Viaje viaje = buscarViaje(viajeSeleccionado, viajes);
+            Reserva reserva;
+            if ((reserva = viaje.realizarReserva(this.usuario, plazas)) == null) {
+                GestorIO.print("Error al intentar reservar el viaje.");
+                return;
+            }
+
+            mostrarReserva(reserva);
+        } catch (ViajeNoValidoException e) {
+            GestorIO.print(e.getMessage());
+        }  
     }
     
     private List<Viaje> listarViajesReservables() {
@@ -145,12 +170,15 @@ public class ViajesController {
         List<Viaje> viajesReservables = new ArrayList<>();
         
         for (Viaje viaje: viajes) {
-            if (!viaje.getPropietario().equals(usuario) && !viaje.isCancelado() && !viaje.isCerrado()) {
+            if (
+                !viaje.getPropietario().equals(usuario) &&
+                !viaje.isCancelado() &&
+                !viaje.isCerrado() &&
+                LocalDateTime.now().isBefore(viaje.getFechaSalida())
+            ) {
                 viajesReservables.add(viaje);
             }
         }
-        
-        (new ListadoViajesView(viajesReservables)).visualizar();
         return viajesReservables;
     }
     
@@ -159,8 +187,8 @@ public class ViajesController {
         (new ReservaView(reserva)).visualizar();
     }
     
-    public void modificarReserva() {
-        if (!isLogeado()) return;
+    public void modificarReserva() throws UsuarioSinEstablecerException {
+        isLogeado();
         
         List<Cancelable> viajes = listarViajesReservados();
         if (viajes.isEmpty()) {
@@ -170,22 +198,21 @@ public class ViajesController {
         
         mostrarReservas(viajes);
         int reservaSeleccionada = GestorIO.getInt("Introduzca el código de reserva a modificar");
-        ViajeFlexible viaje = (ViajeFlexible) buscarReserva(reservaSeleccionada, viajes);
         
-        if (viaje == null) {
-            GestorIO.print("La reserva indicada no existe.");
-            return;
+        try {
+            ViajeFlexible viaje = (ViajeFlexible) buscarReserva(reservaSeleccionada, viajes);
+            int plazas = GestorIO.getInt("Introduzca el número de plazas a reservar");
+            Reserva reserva = viaje.cambiarPlazasReservadas(reservaSeleccionada, plazas);
+
+            if (reserva == null) {
+                GestorIO.print("No quedan suficientes plazas.");
+                return;
+            }
+
+            mostrarReserva(reserva);
+        } catch (ReservaNoValidaException e) {
+            GestorIO.print(e.getMessage());
         }
-        
-        int plazas = GestorIO.getInt("Introduzca el número de plazas a reservar");
-        Reserva reserva = viaje.cambiarPlazasReservadas(reservaSeleccionada, plazas);
-        
-        if (reserva == null) {
-            GestorIO.print("No quedan suficientes plazas.");
-            return;
-        }
-        
-        mostrarReserva(reserva);
     }
     
     private List<Cancelable> listarViajesReservados() {
@@ -193,7 +220,11 @@ public class ViajesController {
         List<Cancelable> viajes = new ArrayList<>();
         
         for (Viaje viaje: viajesTotales) {
-            if (!(viaje instanceof ViajeFlexible) || viaje.isCancelado()) continue;
+            if (
+                !(viaje instanceof ViajeFlexible) ||
+                viaje.isCancelado() ||
+                LocalDateTime.now().isAfter(viaje.getFechaSalida())
+            ) continue;
             
             for (Reserva reserva: viaje.getReservas()) {
                 if (reserva.getUsuario().equals(this.usuario)) {
@@ -214,7 +245,7 @@ public class ViajesController {
         (new ListadoReservasView(viajes, this.usuario)).visualizar();
     }
     
-    private Viaje buscarReserva(int reservaSeleccionada, List<Cancelable> cancelables) {
+    private Viaje buscarReserva(int reservaSeleccionada, List<Cancelable> cancelables) throws ReservaNoValidaException {
         for (Cancelable cancelable: cancelables) {
             Viaje viaje = (Viaje) cancelable;
             for (Reserva reserva: viaje.getReservas()) {
@@ -223,11 +254,11 @@ public class ViajesController {
                 }
             }
         }
-        return null;
+        throw new ReservaNoValidaException();
     }
     
-    public void cancelarReserva() {
-        if (!isLogeado()) return;
+    public void cancelarReserva() throws UsuarioSinEstablecerException {
+        isLogeado();
         
         List<Cancelable> viajes = listarReservasCancelables();
         if (viajes.isEmpty()) {
@@ -237,15 +268,14 @@ public class ViajesController {
         
         mostrarReservas(viajes);
         int reservaSeleccionada = GestorIO.getInt("Introduzca el código de reserva a cancelar");
-        Cancelable viaje = (Cancelable) buscarReserva(reservaSeleccionada, viajes);
         
-        if (viaje == null) {
-            GestorIO.print("La reserva indicada no existe.");
-            return;
+        try {
+            Cancelable viaje = (Cancelable) buscarReserva(reservaSeleccionada, viajes);
+            viaje.cancelarReserva(reservaSeleccionada);
+            GestorIO.print(viaje.cancelableToString() + " cancelada con éxito.");
+        } catch (ReservaNoValidaException e) {
+            GestorIO.print(e.getMessage());
         }
-        
-        viaje.cancelarReserva(reservaSeleccionada);
-        GestorIO.print(viaje.cancelableToString() + " cancelada con éxito.");
     }
     
     private List<Cancelable> listarReservasCancelables() {
@@ -253,7 +283,12 @@ public class ViajesController {
         List<Cancelable> viajes = new ArrayList<>();
         
         for (Viaje viaje: viajesTotales) {
-            if (!(viaje instanceof ViajeCancelable || viaje instanceof ViajeFlexible) || viaje.isCancelado()) continue;
+            if (
+                !(viaje instanceof ViajeCancelable ||
+                viaje instanceof ViajeFlexible) ||
+                viaje.isCancelado() ||
+                LocalDateTime.now().isAfter(viaje.getFechaSalida())
+            ) continue;
             
             for (Reserva reserva: viaje.getReservas()) {
                 if (reserva.getUsuario().equals(this.usuario)) {
@@ -264,11 +299,11 @@ public class ViajesController {
         return viajes;
     }
     
-    public void buscarYReservarViaje() {
-        if (!isLogeado()) return;
+    public void buscarYReservarViaje() throws UsuarioSinEstablecerException {
+        isLogeado();
         
         String ciudad = GestorIO.getString("Introduzca la ciudad a la que desea viajar");
-        List<Viaje> viajes = buscarViaje(ciudad);
+        List<Viaje> viajes = buscarViajes(ciudad);
         if (viajes.isEmpty()) {
             GestorIO.print("Todavía no hay viajes con ese destino.");
             return;
@@ -279,14 +314,16 @@ public class ViajesController {
         crearReserva(viajes);
     }
     
-    private List<Viaje> buscarViaje(String ciudad) {
+    private List<Viaje> buscarViajes(String ciudad) {
         List<Viaje> viajesTotales = viajesManager.findAll();
         List<Viaje> viajes = new ArrayList<>();
         
         for (Viaje viaje: viajesTotales) {
-            if (viaje.getPropietario().getNombre().equals(usuario.getNombre())) continue;
-            
-            if (viaje.getRuta().toLowerCase().matches(".+-" + ciudad.toLowerCase() + ".*")) {
+            if (
+                !viaje.getPropietario().getNombre().equals(usuario.getNombre()) &&
+                LocalDateTime.now().isBefore(viaje.getFechaSalida()) &&
+                viaje.getRuta().toLowerCase().matches(".+-" + ciudad.toLowerCase() + ".*")
+            ) {
                 viajes.add(viaje);
             }
         }
@@ -299,29 +336,23 @@ public class ViajesController {
         do {
             String nombre = GestorIO.getString("Username");
             String contrasenya = GestorIO.getString("Password");
-
-            Usuario usuario = this.usuariosManager.comprobarExistenciaUsuario(nombre);
             
-            if (usuario != null && this.usuariosManager.comprobarContrasenyaUsuario(usuario, contrasenya)) {
+            try {
+                Usuario usuario = this.usuariosManager.comprobarCredenciales(nombre, contrasenya);
                 this.usuario = usuario;
                 GestorIO.print("Bienvenido " + nombre);
                 return;
-            } else if (usuario == null) {
-                GestorIO.print("Error, el usuario introducido no existe.");
-            } else {
-                GestorIO.print("Error, la contraseña introducida es errónea.");
+            } catch (CredencialesInvalidasException e) {
+                GestorIO.print(e.getMessage());
+                intentos++;
             }
-            intentos++;
         } while (intentos < 3);
-        GestorIO.print("Se ha alcanzado el número máximo de intentos. Adiós!");
-        System.exit(0);
+        throw new MaximoIntentosAlcanzadosException();
     }
     
-    private boolean isLogeado() {
+    private void isLogeado() throws UsuarioSinEstablecerException {
         if (usuario == null) {
-            GestorIO.print("No ha iniciado sesión.");
-            return false;
+            throw new UsuarioSinEstablecerException();
         }
-        return true;
     }
 }

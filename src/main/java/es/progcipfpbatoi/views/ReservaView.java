@@ -32,6 +32,8 @@ public class ReservaView {
         view.addRule();
         view.addRow("Plazas", this.reserva.getPlazas());
         view.addRule();
+        view.addRow("Fecha", this.reserva.getFechaFormateada());
+        view.addRule();
         view.setTextAlignment(TextAlignment.CENTER);
         return view;
     }

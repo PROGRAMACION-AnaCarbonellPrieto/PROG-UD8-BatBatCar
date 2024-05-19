@@ -7,6 +7,10 @@ package es.progcipfpbatoi.views;
  * métodos aquí establecidos (puedes añadir nuevos, si lo crees conveniente).
  */
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Scanner;
 
 public class GestorIO {
@@ -56,14 +60,42 @@ public class GestorIO {
     
     public static String getRuta(String mensaje) {
         do {
-            System.out.print(mensaje + ": ");
+            System.out.print(mensaje + " (Ej: Alcoy-Alicante): ");
             String ruta = scanner.next();
             
             if (ruta.matches("[a-zA-Z]+(-[a-zA-Z]+)+")) {
                 return ruta;
             }
             
-            System.out.println("El formato introducido no es correcto");
+            System.out.println("Debe introducir una ruta con el formato correcto");
+        } while (true);
+    }
+    
+    public static LocalDate getFecha(String mensaje) {
+        do {
+            System.out.print(mensaje + " (Ej: 10-10-2024): ");
+            String fecha = scanner.next();
+            
+            try {
+                DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+                return LocalDate.parse(fecha, formato);
+            } catch (DateTimeParseException e) {
+                System.out.println("Debe introducir una fecha con el formato correcto.");
+            }
+        } while (true);
+    }
+    
+    public static LocalTime getHora(String mensaje) {
+        do {
+            System.out.print(mensaje + " (Ej: 23:15): ");
+            String fecha = scanner.next();
+            
+            try {
+                DateTimeFormatter formato = DateTimeFormatter.ofPattern("HH:mm");
+                return LocalTime.parse(fecha, formato);
+            } catch (DateTimeParseException e) {
+                System.out.println("Debe introducir una hora con el formato correcto.");
+            }
         } while (true);
     }
 

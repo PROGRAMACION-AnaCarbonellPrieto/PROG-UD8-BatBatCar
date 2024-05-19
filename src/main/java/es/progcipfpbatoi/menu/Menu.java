@@ -1,7 +1,13 @@
 package es.progcipfpbatoi.menu;
 
+import es.progcipfpbatoi.menu.opcines.Opcion;
 import es.progcipfpbatoi.controller.ViajesController;
+import es.progcipfpbatoi.exceptions.UsuarioSinEstablecerException;
 import es.progcipfpbatoi.views.GestorIO;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Clase que gestiona el menú de opciones. A partir de esta clase se ejecutan
@@ -10,59 +16,49 @@ import es.progcipfpbatoi.views.GestorIO;
  */
 
 public class Menu {
-
-    private static final int OPCION_SALIR = 9;
-    
+    private String titulo;
+    private List<Opcion> opciones;
     private ViajesController viajesController;
     
-    public Menu() {
+    public Menu(String titulo) {
+        this.titulo = titulo;
+        this.opciones = new ArrayList<>();
         this.viajesController = new ViajesController();
     }
+    
+    public void anyadir(Opcion opcion) {
+        this.opciones.add(opcion);
+    }
+    
+    private void mostrar() {
+        GestorIO.print("\n" + this.titulo + "\n=========");
+        for (int i = 0; i < this.opciones.size(); i++) {
+            this.opciones.get(i).mostrar(i + 1);
+        }
+        
+    }
+    
+    private Opcion getOpcion() {
+        int opcionSeleccionada = GestorIO.getInt(
+                String.format("Seleccione una opción [%d-%d]", 1, this.opciones.size()),
+                1, this.opciones.size()
+        );
+        return this.opciones.get(opcionSeleccionada - 1);
+    }
 
-    public void iniciar() {
-        int opcionSeleccionada;
+    public void ejecutar() {
+        Opcion opcionSeleccionada;
         
         do {     
-            mostrarOpciones();
-            opcionSeleccionada = solicitarOpcion();
-            ejecutarOpcion(opcionSeleccionada);
-        } while (opcionSeleccionada != OPCION_SALIR);
+            mostrar();
+            opcionSeleccionada = getOpcion();
+            try {
+                opcionSeleccionada.ejecutar(this.viajesController);
+            } catch (UsuarioSinEstablecerException e) {
+                GestorIO.print(e.getMessage());
+            }
+        } while (!opcionSeleccionada.finalizar());
         
-    }
-
-    private void mostrarOpciones() {
-        GestorIO.print("\nBatBatCar");
-        GestorIO.print("=========");
-        GestorIO.print("1.Establecer ususario (login)");
-        GestorIO.print("2.Mostrar todos los viajes");
-        GestorIO.print("3.Añadir viaje");
-        GestorIO.print("4.Cancelar viaje");
-        GestorIO.print("5.Realizar reserva");
-        GestorIO.print("6.Modificar reserva");
-        GestorIO.print("7.Cancelar reserva");
-        GestorIO.print("8.Buscar viaje y realizar reserva");
-        GestorIO.print("9.Salir");
-    }
-    
-    private int solicitarOpcion() {
-        return GestorIO.getInt(
-                String.format("Seleccione una opción [%d-%d]", 1, OPCION_SALIR),
-                1, OPCION_SALIR
-        );
-    }
-    
-    private void ejecutarOpcion(int opcionSeleccionada) {
-        switch (opcionSeleccionada) {
-            case 1 -> viajesController.iniciarSesion();
-            case 2 -> viajesController.listarViajes();
-            case 3 -> viajesController.anyadirViaje();
-            case 4 -> viajesController.cancelarViaje();
-            case 5 -> viajesController.reservarViaje();
-            case 6 -> viajesController.modificarReserva();
-            case 7 -> viajesController.cancelarReserva();
-            case 8 -> viajesController.buscarYReservarViaje();
-            case OPCION_SALIR -> GestorIO.print("Adios!");
-        }
     }
 
 }

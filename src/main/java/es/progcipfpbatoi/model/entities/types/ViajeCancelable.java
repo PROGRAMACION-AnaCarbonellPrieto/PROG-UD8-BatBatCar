@@ -5,6 +5,7 @@
 package es.progcipfpbatoi.model.entities.types;
 
 import es.progcipfpbatoi.model.entities.Usuario;
+import java.time.LocalDateTime;
 
 /**
  *
@@ -12,8 +13,8 @@ import es.progcipfpbatoi.model.entities.Usuario;
  */
 public class ViajeCancelable extends Viaje implements Cancelable {
 
-    public ViajeCancelable(Usuario propietario, String ruta, int duracion, int plazasOfertadas, float precio) {
-        super(propietario, ruta, duracion, plazasOfertadas, precio);
+    public ViajeCancelable(Usuario propietario, String ruta, int duracion, LocalDateTime fechaSalida, int plazasOfertadas, float precio) {
+        super(propietario, ruta, duracion, fechaSalida, plazasOfertadas, precio);
     }
     
     @Override

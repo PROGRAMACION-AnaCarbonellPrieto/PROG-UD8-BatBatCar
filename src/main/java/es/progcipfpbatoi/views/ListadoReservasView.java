@@ -29,11 +29,11 @@ public class ListadoReservasView {
     private AsciiTable buildASCIITable() {
         AsciiTable view = new AsciiTable();
         view.addRule();
-        view.addRow("*", "*", "*", "*", "*");
+        view.addRow("*", "*", "*", "*", "*", "*");
         view.addRule();
-        view.addRow(null, null, null, null, "Reservas de viajes");
+        view.addRow(null, null, null, null, null, "Reservas de viajes");
         view.addRule();
-        view.addRow("Cod. Reserva", "Cod. Viaje", "Propietario Viaje", null, "Plazas Reservadas");
+        view.addRow("Cod. Reserva", "Cod. Viaje", "Propietario Viaje", null, "Plazas Reservadas", "Fecha");
         view.addRule();
         generarFilasReservas(view);
         view.setTextAlignment(TextAlignment.CENTER);
@@ -59,7 +59,8 @@ public class ListadoReservasView {
                         viaje.getCodViaje(),
                         viaje.getPropietario().getNombre(),
                         null,
-                        reserva.getPlazas()
+                        reserva.getPlazas(),
+                        reserva.getFechaFormateada()
                 );
                 tabla.addRule();
             }

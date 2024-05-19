@@ -24,11 +24,11 @@ public class ListadoViajesView {
 
         AsciiTable view = new AsciiTable();
         view.addRule();
-        view.addRow("*", "*", "*", "*", "*", "*", "*", "*");
+        view.addRow("*", "*", "*", "*", "*", "*", "*", "*", "*");
         view.addRule();
-        view.addRow(null, null, null, null, null, null, null, "Listado Viajes");
+        view.addRow(null, null, null, null, null, null, null, null, "Listado Viajes");
         view.addRule();
-        view.addRow("Cod. Viaje", null, "Ruta", "Precio", "Propietario", "Tipo", "Plazas Disponibles", "Cancelado");
+        view.addRow("Cod. Viaje", null, "Ruta", "Fecha salida", "Precio", "Propietario", "Tipo", "Plazas Disponibles", "Cancelado");
         view.addRule();
         generarFilasViajes(view);
         view.setTextAlignment(TextAlignment.CENTER);
@@ -50,7 +50,8 @@ public class ListadoViajesView {
                     viaje.getCodViaje(),
                     null,
                     viaje.getRuta(),
-                    viaje.getPrecio(),
+                    viaje.getFechaFormateada(),
+                    viaje.getPrecioFormateado(),
                     viaje.getPropietario().getNombre(),
                     viaje.getTipo(),
                     viaje.getPlazasDisponibles(),

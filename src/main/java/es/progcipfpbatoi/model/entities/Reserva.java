@@ -4,6 +4,9 @@
  */
 package es.progcipfpbatoi.model.entities;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 /**
  *
  * @author Ana Carbonell Prieto
@@ -14,11 +17,13 @@ public class Reserva {
     private int codReserva;
     private Usuario usuario;
     private int plazas;
+    private LocalDateTime fecha;
 
     public Reserva(Usuario usuario, int plazas) {
         this.codReserva = crearNuevoCodigo();
         this.usuario = usuario;
         this.plazas = plazas;
+        this.fecha = LocalDateTime.now();
     }
     
     private int crearNuevoCodigo() {
@@ -39,5 +44,10 @@ public class Reserva {
 
     public int getCodReserva() {
         return codReserva;
+    }
+    
+    public String getFechaFormateada() {
+        DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd-MM-yyyy 'a las' HH:mm");
+        return this.fecha.format(formato);
     }
 }
